@@ -17,7 +17,7 @@ local PLUGIN_PATH = _PLUGIN.path
 -- 配置
 local SERVICE_URL = "http://127.0.0.1:5000/analyze"  -- Python HTTP 服务地址
 local PREVIEW_SIZE = 384
-local MODEL = "xiaomi_mimo/mimo-v2.5"  -- 模型名称 (LiteLLM 格式)
+local MODEL = "gemini/gemini-1.5-pro"  -- 模型名称 (LiteLLM 格式)
 local LOG_FILE = PLUGIN_PATH .. "/lr_ai_log.txt"
 local REQUEST_TIMEOUT = 60  -- HTTP 请求超时秒数
 
@@ -275,7 +275,6 @@ LrTasks.startAsyncTask(function()
     local jsonParts = {
         '{\n',
         '  "image_path": "', jsonEscape(previewPath), '",\n',
-        '  "model": "', jsonEscape(MODEL), '",\n',
         '  "style_prompt": "', jsonEscape(prefs.stylePrompt), '",\n',
         '  "current_settings": {\n',
         '    "Exposure": ', developSetting(currentSettings, "Exposure", "Exposure2012", 0), ',\n',

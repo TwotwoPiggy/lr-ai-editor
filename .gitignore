@@ -26,3 +26,6 @@ htmlcov/
 # Lightroom plugin temp files
 AI_Editor.lrdevplugin/temp_*/
 AI_Editor.lrdevplugin/lr_ai_log.txt
+
+# Worker config with API key
+worker/config.py

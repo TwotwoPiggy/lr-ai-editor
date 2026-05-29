@@ -354,7 +354,7 @@ async def _analyze_image(
             api_base=config.API_BASE,
             temperature=config.TEMPERATURE,
             max_tokens=config.MAX_TOKENS,
-            response_format={"type": "json_object"},
+            # response_format={"type": "json_object"}, # 某些模型/LiteLLM搭配使用时会导致过早截断
             timeout=config.REQUEST_TIMEOUT_SECONDS,
         )
         log("litellm response received")
