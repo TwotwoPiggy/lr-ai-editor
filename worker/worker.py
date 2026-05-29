@@ -353,7 +353,6 @@ async def _analyze_image(
             api_key=config.API_KEY,
             api_base=config.API_BASE,
             temperature=config.TEMPERATURE,
-            max_tokens=config.MAX_TOKENS,
             # response_format={"type": "json_object"}, # 某些模型/LiteLLM搭配使用时会导致过早截断
             timeout=config.REQUEST_TIMEOUT_SECONDS,
         )
@@ -406,6 +405,13 @@ async def _analyze_image(
             content = content.strip()
             log(f"去掉代码块后: {content[:100]}...")
 
+        # 调试用：把完整的 LLM 输出写入到 worker 目录，方便排查
+        try:
+            with open("last_response.txt", "w", encoding="utf-8") as f:
+                f.write(content if content else "")
+        except Exception as e:
+            log(f"Failed to write last_response.txt: {e}")
+
         if not content:
             return {
                 "advice": "AI未返回有效内容",
@@ -420,8 +426,13 @@ async def _analyze_image(
                 "tint": 0
             }
 
+        # 清理常见的LLM JSON语法错误 (如尾随逗号)
+        import re
+        content_fixed = re.sub(r',\s*}', '}', content)
+        content_fixed = re.sub(r',\s*]', ']', content_fixed)
+
         # 解析JSON
-        result = json.loads(content)
+        result = json.loads(content_fixed)
 
         def current_value(lr_key: str, fallback: float, *aliases: str) -> float:
             try:
