@@ -78,7 +78,7 @@ def extract_number_after(text: str, key: str) -> float | None:
     return None
 
 
-def result_from_reasoning(reasoning: str, current_settings: dict | None = None) -> dict | None:
+def result_from_reasoning(reasoning: str, current_settings: dict | None = None, is_raw: bool = True) -> dict | None:
     if not reasoning:
         return None
     reasoning_for_params = reasoning.split("所有数值")[0]
@@ -115,7 +115,7 @@ def result_from_reasoning(reasoning: str, current_settings: dict | None = None) 
     extracted["advice"] = "从推理内容提取参数"
     extracted["raw_content"] = ""
     extracted["raw_reasoning"] = truncate_text(reasoning)
-    return apply_mvp_safety_limits(extracted, current_settings)
+    return apply_mvp_safety_limits(extracted, current_settings, is_raw)
 
 
 HSL_FIELDS = {
@@ -230,7 +230,7 @@ def normalize_hsl(result: dict, current_settings: dict | None = None) -> dict:
     return result
 
 
-def apply_mvp_safety_limits(result: dict, current_settings: dict | None = None) -> dict:
+def apply_mvp_safety_limits(result: dict, current_settings: dict | None = None, is_raw: bool = True) -> dict:
     """Keep MVP auto-edits conservative enough for portraits."""
     limits = {
         "exposure": (-0.35, 0.35),
@@ -244,7 +244,7 @@ def apply_mvp_safety_limits(result: dict, current_settings: dict | None = None) 
         "dehaze": (-5, 5),
         "vibrance": (-10, 12),
         "saturation": (-10, 8),
-        "temperature": (5200, 7600),
+        "temperature": (5200, 7600) if is_raw else (-30, 30),
         "tint": (-12, 12),
     }
     for key, (low, high) in limits.items():
@@ -266,7 +266,7 @@ def apply_mvp_safety_limits(result: dict, current_settings: dict | None = None) 
             "dehaze": ("Dehaze", 5),
             "vibrance": ("Vibrance", 10),
             "saturation": ("Saturation", 8),
-            "temperature": ("Temperature", 500),
+            "temperature": ("Temperature", 500) if is_raw else ("Temperature", 15),
             "tint": ("Tint", 8),
         }
         for output_key, (current_key, max_delta) in key_map.items():
@@ -293,10 +293,11 @@ async def analyze_image(
     style_prompt: str = "",
     current_settings: dict | None = None,
     metadata: dict | None = None,
+    is_raw: bool = True,
 ) -> dict:
     """使用LiteLLM调用视觉模型分析图片"""
     return await asyncio.wait_for(
-        _analyze_image(image_path, model, style_prompt, current_settings, metadata),
+        _analyze_image(image_path, model, style_prompt, current_settings, metadata, is_raw),
         timeout=config.REQUEST_TIMEOUT_SECONDS,
     )
 
@@ -307,8 +308,9 @@ async def _analyze_image(
     style_prompt: str = "",
     current_settings: dict | None = None,
     metadata: dict | None = None,
+    is_raw: bool = True,
 ) -> dict:
-    log(f"analyze_image start: model={model}, api_base={config.API_BASE}, image={image_path}")
+    log(f"analyze_image start: model={model}, api_base={config.API_BASE}, image={image_path}, is_raw={is_raw}")
 
     # 读取并编码图片
     with open(image_path, "rb") as f:
@@ -317,6 +319,9 @@ async def _analyze_image(
 
     # 构建prompt
     user_prompt = config.BASE_PROMPT
+    if not is_raw:
+        user_prompt = user_prompt.replace("色温(2000到50000)", "色温(-100到+100，相对偏移值)")
+        
     if style_prompt:
         user_prompt = config.STYLE_PROMPT_TEMPLATE.format(style=style_prompt) + "\n\n" + user_prompt
     if current_settings or metadata:
@@ -468,7 +473,7 @@ async def _analyze_image(
         result["raw_content"] = truncate_text(content)
         result["raw_reasoning"] = truncate_text(reasoning)
 
-        return apply_mvp_safety_limits(result, current_settings)
+        return apply_mvp_safety_limits(result, current_settings, is_raw)
 
     except Exception as e:
         log(f"analyze_image failed: {type(e).__name__}: {e}")

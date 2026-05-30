@@ -1,26 +1,10 @@
--- ==============================================================================
--- LR AI Editor: User Configuration
--- ==============================================================================
-
+-- ====================================================================
+-- 此文件由 worker_service.py 启动时自动生成，请勿手动编辑。
+-- 如需修改配置，请编辑项目根目录下的 config.json。
+-- ====================================================================
 return {
-    -- LiteLLM Proxy地址
-    litellmUrl = "http://localhost:4000/v1",
-
-    -- 预览图尺寸 (严格控制: 512-1024px)
-    previewSize = 768,
-
-    -- 预览图质量 (0.5 = 50%, 保持小体积)
-    previewQuality = 0.5,
-
-    -- Python路径 (留空则使用系统PATH中的python)
-    pythonPath = "",
-
-    -- Worker脚本路径 (需要用户在LR中配置)
-    workerPath = "",
-
-    -- 默认模型 (LiteLLM中配置的模型名)
-    defaultModel = "gpt-4o",
-
-    -- 临时文件夹位置
-    tempFolder = "",  -- 留空则使用桌面
+    serviceUrl = "http://127.0.0.1:5000/analyze",
+    defaultModel = "gemini/gemini-2.5-flash",
+    previewSize = 384,
+    requestTimeout = 60,
 }

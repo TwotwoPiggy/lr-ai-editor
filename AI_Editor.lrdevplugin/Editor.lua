@@ -14,12 +14,18 @@ local LrHttp = import 'LrHttp'
 -- 插件目录路径
 local PLUGIN_PATH = _PLUGIN.path
 
+-- 加载自动生成的配置（若服务未启动生成或文件不存在则优雅退化为默认值）
+local configOk, pluginConfig = pcall(function() return require 'config' end)
+if not configOk or type(pluginConfig) ~= "table" then
+    pluginConfig = {}
+end
+
 -- 配置
-local SERVICE_URL = "http://127.0.0.1:5000/analyze"  -- Python HTTP 服务地址
-local PREVIEW_SIZE = 384
-local MODEL = "gemini/gemini-1.5-pro"  -- 模型名称 (LiteLLM 格式)
+local SERVICE_URL = pluginConfig.serviceUrl or "http://127.0.0.1:5000/analyze"  -- Python HTTP 服务地址
+local PREVIEW_SIZE = pluginConfig.previewSize or 384
+local MODEL = pluginConfig.defaultModel or "gemini/gemini-2.5-flash"  -- 模型名称 (LiteLLM 格式)
 local LOG_FILE = PLUGIN_PATH .. "/lr_ai_log.txt"
-local REQUEST_TIMEOUT = 60  -- HTTP 请求超时秒数
+local REQUEST_TIMEOUT = pluginConfig.requestTimeout or 60  -- HTTP 请求超时秒数
 
 local function log(msg)
     local f = io.open(LOG_FILE, "a")
@@ -113,7 +119,15 @@ LrTasks.startAsyncTask(function()
         return
     end
 
-    log("照片已选中")
+    -- 检测照片是否为 RAW 格式（RAW 和非 RAW 的色温滑块数值体系不同）
+    local isRaw = false
+    local okFmt, fileFormat = LrTasks.pcall(function()
+        return photo:getRawMetadata("fileFormat")
+    end)
+    if okFmt and fileFormat == "RAW" then
+        isRaw = true
+    end
+    log("照片已选中, 格式: " .. tostring(fileFormat) .. ", isRaw: " .. tostring(isRaw))
 
     local f = LrView.osFactory()
     local prefs = LrPrefs.prefsForPlugin()
@@ -276,6 +290,7 @@ LrTasks.startAsyncTask(function()
         '{\n',
         '  "image_path": "', jsonEscape(previewPath), '",\n',
         '  "style_prompt": "', jsonEscape(prefs.stylePrompt), '",\n',
+        '  "is_raw": ', (isRaw and 'true' or 'false'), ',\n',
         '  "current_settings": {\n',
         '    "Exposure": ', developSetting(currentSettings, "Exposure", "Exposure2012", 0), ',\n',
         '    "Contrast": ', developSetting(currentSettings, "Contrast", "Contrast2012", 0), ',\n',

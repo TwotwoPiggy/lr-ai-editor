@@ -1,0 +1,11 @@
+{
+  "api_key": "your-api-key-here",
+  "default_model": "gemini/gemini-2.5-flash",
+  "api_base": null,
+  "service_url": "http://127.0.0.1:5000/analyze",
+  "service_port": 5000,
+  "preview_size": 384,
+  "request_timeout": 60,
+  "temperature": 1,
+  "max_tokens": 2000
+}

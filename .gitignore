@@ -1,5 +1,7 @@
 # Sensitive configuration
 litellm_config.yaml
+config.json
+AI_Editor.lrdevplugin/config.lua
 
 # Python
 __pycache__/
@@ -32,3 +34,7 @@ worker/config.py
 
 # Worker temp files
 worker/last_response.txt
+last_response.txt
+
+# Planning workspace
+.planning/

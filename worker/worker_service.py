@@ -71,6 +71,7 @@ class AIEditorHandler(BaseHTTPRequestHandler):
             style_prompt = request_data.get("style_prompt", "")
             current_settings = request_data.get("current_settings")
             metadata = request_data.get("metadata")
+            is_raw = request_data.get("is_raw", True)
 
             if not image_path:
                 self.send_error(400, "Missing image_path")
@@ -92,6 +93,7 @@ class AIEditorHandler(BaseHTTPRequestHandler):
                     style_prompt=style_prompt,
                     current_settings=current_settings,
                     metadata=metadata,
+                    is_raw=is_raw,
                 ))
             except Exception as e:
                 print(f"分析失败: {e}", flush=True)
@@ -122,8 +124,38 @@ class AIEditorHandler(BaseHTTPRequestHandler):
             self.send_error(500, f"Internal error: {e}")
 
 
+def sync_lua_config():
+    """解析 config.json 并同步生成 Lightroom DevPlugin 的 config.lua"""
+    try:
+        # 获取根目录路径
+        root_dir = Path(__file__).resolve().parent.parent
+        lua_config_path = root_dir / "AI_Editor.lrdevplugin" / "config.lua"
+
+        # 生成 config.lua 内容
+        lua_content = f"""-- ====================================================================
+-- 此文件由 worker_service.py 启动时自动生成，请勿手动编辑。
+-- 如需修改配置，请编辑项目根目录下的 config.json。
+-- ====================================================================
+return {{
+    serviceUrl = "{config._cfg.get('service_url', f'http://127.0.0.1:{config.SERVICE_PORT}/analyze')}",
+    defaultModel = "{config.DEFAULT_MODEL}",
+    previewSize = {config._cfg.get('preview_size', 384)},
+    requestTimeout = {config.REQUEST_TIMEOUT_SECONDS},
+}}
+"""
+        # 写入文件
+        with open(lua_config_path, "w", encoding="utf-8") as f:
+            f.write(lua_content)
+        print(f"[配置同步] 成功生成 Lua 插件配置: {lua_config_path}", flush=True)
+    except Exception as e:
+        print(f"[配置同步] 警告: 自动同步 Lua 配置失败: {e}", file=sys.stderr)
+
+
 def run_server(port: int):
     """启动 HTTP 服务"""
+    # 启动前同步配置
+    sync_lua_config()
+    
     server_address = ("127.0.0.1", port)
     httpd = HTTPServer(server_address, AIEditorHandler)
     print(f"LR AI Editor 服务启动在 http://127.0.0.1:{port}", flush=True)
@@ -136,7 +168,8 @@ def run_server(port: int):
 
 def main():
     parser = argparse.ArgumentParser(description="LR AI Editor HTTP Service")
-    parser.add_argument("--port", type=int, default=5000, help="服务端口 (默认 5000)")
+    # 默认值改为从 config 读取
+    parser.add_argument("--port", type=int, default=config.SERVICE_PORT, help=f"服务端口 (默认 {config.SERVICE_PORT})")
     args = parser.parse_args()
 
     run_server(args.port)

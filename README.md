@@ -33,31 +33,27 @@ cd worker
 pip install -r requirements.txt
 ```
 
-### 2. 配置模型
+### 2. 配置模型与 API 密钥
 
-编辑 `worker/config.py`，设置模型和 API Key：
+在项目根目录下复制 `config.json.example` 并重命名为 `config.json`，在其中填写您的配置项（如 `api_key` 和 `default_model`）：
 
-```python
-# 使用 OpenAI
-DEFAULT_MODEL = "openai/gpt-4o"
-API_KEY = "your-openai-key"
-
-# 使用 Anthropic
-DEFAULT_MODEL = "anthropic/claude-3-5-sonnet-20241022"
-API_KEY = "your-anthropic-key"
-
-# 使用自定义 API
-DEFAULT_MODEL = "xiaomi_mimo/mimo-v2.5"
-API_KEY = "your-api-key"
-API_BASE = "https://your-api-base/v1"
+```json
+{
+  "api_key": "your-gemini-key-here",
+  "default_model": "gemini/gemini-2.5-flash",
+  "api_base": null,
+  "service_url": "http://127.0.0.1:5000/analyze",
+  "service_port": 5000,
+  "preview_size": 384,
+  "request_timeout": 60,
+  "temperature": 1,
+  "max_tokens": 2000
+}
 ```
 
-或通过环境变量配置：
-```bash
-set DEFAULT_MODEL=your-model
-set API_KEY=your-key
-set API_BASE=your-base-url  # 可选
-```
+> [!NOTE]
+> `config.json` 已加入 `.gitignore` 规则，您的 API Key 不会被提交。
+> 您也可以通过同名的系统环境变量来覆盖这些配置。
 
 ### 3. 安装Lightroom插件
 
@@ -112,24 +108,20 @@ API 端点:
 
 ## 配置项
 
-### worker/config.py
+本项目使用统一的 `config.json` 配置文件：
 
-通过环境变量配置：
-
-| 变量 | 说明 | 默认值 |
+| 字段 | 说明 | 默认值 |
 |------|------|--------|
-| `LITELLM_PROXY_API_KEY` | LiteLLM密钥 | `sk-lr-editor` |
-| `LITELLM_PROXY_API_BASE` | LiteLLM地址 | `http://localhost:4000` |
-| `DEFAULT_MODEL` | 默认模型 | `litellm_proxy/mimo` |
-| `REQUEST_TIMEOUT_SECONDS` | 请求超时 | `60` |
+| `api_key` | 视觉 AI 模型的 API 密钥（如 Google Gemini 密钥） | - |
+| `default_model` | 默认调用的视觉模型（LiteLLM 格式） | `gemini/gemini-2.5-flash` |
+| `api_base` | 自定义 API 的 Base URL（如使用中转或代理，可选） | `null` |
+| `service_url` | Lightroom 插件调用 Python 服务的地址 | `http://127.0.0.1:5000/analyze` |
+| `service_port` | Python HTTP 服务的启动端口 | `5000` |
+| `preview_size` | 预览图的最长边尺寸（px） | `384` |
+| `request_timeout` | 模型调用和网络请求的超时时间（秒） | `60` |
 
-### Editor.lua 内置配置
-
-| 参数 | 说明 | 当前值 |
-|------|------|--------|
-| `SERVICE_URL` | HTTP服务地址 | `http://127.0.0.1:5000/analyze` |
-| `PREVIEW_SIZE` | 预览图尺寸 | 384px |
-| `REQUEST_TIMEOUT` | HTTP超时 | 60秒 |
+> [!TIP]
+> 运行 Python HTTP 服务时，系统会自动将 `config.json` 的相关配置同步并生成为 Lightroom 插件的 `AI_Editor.lrdevplugin/config.lua`，无需手动双向同步。
 
 ## 支持的调整参数
 
@@ -191,11 +183,12 @@ lr-ai-editor/
 ├── AI_Editor.lrdevplugin/    # Lightroom插件
 │   ├── Info.lua              # 插件信息
 │   ├── Editor.lua            # 主逻辑
-│   └── config.lua            # (已弃用)
+│   └── config.lua            # (自动生成，由 Python 端启动时自动同步)
 ├── worker/                   # Python Worker
 │   ├── worker.py             # AI调用逻辑
-│   ├── config.py             # Worker配置
+│   ├── config.py             # Worker配置读取
 │   └── requirements.txt      # Python依赖
-├── litellm_config.yaml       # LiteLLM配置
+├── config.json.example       # 统一配置文件模板
+├── config.json               # 实际本地配置文件（不提交）
 └── README.md
 ```
